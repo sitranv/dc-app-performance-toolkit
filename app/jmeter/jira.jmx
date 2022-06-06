@@ -9289,7 +9289,7 @@ if (response_data.name != vars.get(&quot;app_specific_username&quot;)) {
                 <hashTree/>
               </hashTree>
             </hashTree>
-            <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="jmeter_app_specific_action" enabled="true">
+            <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="jmeter_app_specific_action" enabled="false">
               <boolProp name="TransactionController.includeTimers">false</boolProp>
               <boolProp name="TransactionController.parent">true</boolProp>
             </TransactionController>
@@ -9573,6 +9573,399 @@ if ( sleep_time &gt; 0 ) {
                 <stringProp name="scriptLanguage">groovy</stringProp>
               </JSR223Timer>
               <hashTree/>
+            </hashTree>
+            <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="check_hierarchical_field" enabled="true"/>
+            <hashTree>
+              <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Issue" enabled="true">
+                <collectionProp name="Arguments.arguments">
+                  <elementProp name="parrent_issue" elementType="Argument">
+                    <stringProp name="Argument.name">parrent_issue</stringProp>
+                    <stringProp name="Argument.value">ST-49</stringProp>
+                    <stringProp name="Argument.metadata">=</stringProp>
+                  </elementProp>
+                  <elementProp name="sub_task_1" elementType="Argument">
+                    <stringProp name="Argument.name">sub_task_1</stringProp>
+                    <stringProp name="Argument.value">TEST-101</stringProp>
+                    <stringProp name="Argument.metadata">=</stringProp>
+                  </elementProp>
+                  <elementProp name="sub_task_2" elementType="Argument">
+                    <stringProp name="Argument.name">sub_task_2</stringProp>
+                    <stringProp name="Argument.value">TEST-102</stringProp>
+                    <stringProp name="Argument.metadata">=</stringProp>
+                  </elementProp>
+                  <elementProp name="sub_task_3" elementType="Argument">
+                    <stringProp name="Argument.name">sub_task_3</stringProp>
+                    <stringProp name="Argument.value">TEST-103</stringProp>
+                    <stringProp name="Argument.metadata">=</stringProp>
+                  </elementProp>
+                </collectionProp>
+              </Arguments>
+              <hashTree/>
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Check sum" enabled="true">
+                <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+                  <collectionProp name="Arguments.arguments"/>
+                </elementProp>
+                <stringProp name="HTTPSampler.domain"></stringProp>
+                <stringProp name="HTTPSampler.port"></stringProp>
+                <stringProp name="HTTPSampler.protocol"></stringProp>
+                <stringProp name="HTTPSampler.contentEncoding"></stringProp>
+                <stringProp name="HTTPSampler.path">${application.postfix}/browse/${issue_key}</stringProp>
+                <stringProp name="HTTPSampler.method">GET</stringProp>
+                <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+                <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+                <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+                <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+                <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+                <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+                <stringProp name="HTTPSampler.response_timeout"></stringProp>
+              </HTTPSamplerProxy>
+              <hashTree>
+                <BeanShellAssertion guiclass="BeanShellAssertionGui" testclass="BeanShellAssertion" testname="Check sum" enabled="true">
+                  <stringProp name="BeanShellAssertion.query">import java.util.regex;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.math.BigDecimal;
+
+response = prev.getResponseDataAsString();
+
+boolean isProjectDP = response.contains(&quot;[\&quot;project-id\&quot;]=\&quot;10095\&quot;&quot;);
+boolean isPanelConfigExist = response.contains(&quot;id=\&quot;hcf-configs-panel_heading\&quot;&quot;);
+
+log.info(&quot;isProjectDP - &quot; + isProjectDP.toString());
+log.info(&quot;isPanelConfigExist - &quot; + isPanelConfigExist.toString());
+
+if (isProjectDP &amp;&amp; isPanelConfigExist) {
+	log.info(&quot;Correct project&quot;);
+	boolean isFieldExist = response.contains(&quot;id=\&quot;rowForcustomfield_11102\&quot;&quot;);
+	boolean isValueExist = response.contains(&quot;id=\&quot;customfield_11102-val\&quot;&quot;);
+	
+	log.info(&quot;isFieldExist - &quot; + isFieldExist.toString() + &quot; isValueExist - &quot; + isValueExist.toString());
+	
+	if (isFieldExist &amp;&amp; isValueExist) {
+		boolean isSubTaskExist = response.contains(&quot;id=\&quot;view-subtasks_heading\&quot;&quot;);
+		log.info(&quot;isSubTaskExist - &quot; + isSubTaskExist.toString());
+		
+		if (isSubTaskExist) {
+			
+			Pattern subTaskPattern = Pattern.compile(&quot;&lt;td class=\&quot;customfield_11106\&quot;&gt;(.*?)\n&lt;/td&gt;&quot;);
+			Matcher subTaskMatcher = subTaskPattern.matcher(response);
+			
+			BigDecimal sum = new BigDecimal(0);
+			
+			while (subTaskMatcher.find()) {
+			    String s = subTaskMatcher.group(1);
+			    sum = sum.add(new BigDecimal(s.trim()));
+			
+			}
+			
+			Pattern parrentPattern = Pattern.compile(&quot;&lt;li id=\&quot;rowForcustomfield_11102\&quot; class=\&quot;item\&quot;&gt;([.\\s\\S]*)&lt;span&gt;([.\\d]*?)&lt;/span&gt;([.\\s\\S]*)&lt;/li&gt;([.\\s\\S]*)&lt;li id=\&quot;rowForcustomfield_11103\&quot;&quot;);
+			
+			Matcher parrentMatcher = parrentPattern.matcher(response);
+			
+			BigDecimal total;
+			while (parrentMatcher.find()) {
+				total = new BigDecimal(parrentMatcher.group(2).trim());
+			}
+			
+			log.info(&quot;Sum of subtasks = &quot; + sum);
+			log.info(&quot;Total field value = &quot; + total);
+			
+			if (sum.compareTo(total) == 0) {
+				prev.setSuccessful(true);
+			} else {
+				prev.setSuccessful(false);
+			}
+
+		}
+		prev.setSuccessful(true);
+		
+	} else {
+		prev.setSuccessful(false);
+	}
+	
+}
+//prev.setSuccessful(true);
+</stringProp>
+                  <stringProp name="BeanShellAssertion.filename"></stringProp>
+                  <stringProp name="BeanShellAssertion.parameters"></stringProp>
+                  <boolProp name="BeanShellAssertion.resetInterpreter">false</boolProp>
+                </BeanShellAssertion>
+                <hashTree/>
+              </hashTree>
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Check mean" enabled="true">
+                <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+                  <collectionProp name="Arguments.arguments"/>
+                </elementProp>
+                <stringProp name="HTTPSampler.domain"></stringProp>
+                <stringProp name="HTTPSampler.port"></stringProp>
+                <stringProp name="HTTPSampler.protocol"></stringProp>
+                <stringProp name="HTTPSampler.contentEncoding"></stringProp>
+                <stringProp name="HTTPSampler.path">${application.postfix}/browse/${issue_key}</stringProp>
+                <stringProp name="HTTPSampler.method">GET</stringProp>
+                <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+                <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+                <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+                <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+                <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+                <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+                <stringProp name="HTTPSampler.response_timeout"></stringProp>
+              </HTTPSamplerProxy>
+              <hashTree>
+                <BeanShellAssertion guiclass="BeanShellAssertionGui" testclass="BeanShellAssertion" testname="Check mean" enabled="true">
+                  <stringProp name="BeanShellAssertion.query">import java.util.regex;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+response = prev.getResponseDataAsString();
+
+boolean isProjectDP = response.contains(&quot;[\&quot;project-id\&quot;]=\&quot;10095\&quot;&quot;);
+boolean isPanelConfigExist = response.contains(&quot;id=\&quot;hcf-configs-panel_heading\&quot;&quot;);
+
+log.info(&quot;isProjectDP - &quot; + isProjectDP.toString());
+log.info(&quot;isPanelConfigExist - &quot; + isPanelConfigExist.toString());
+
+if (isProjectDP &amp;&amp; isPanelConfigExist) {
+	log.info(&quot;Correct project&quot;);
+	boolean isFieldExist = response.contains(&quot;id=\&quot;rowForcustomfield_11103\&quot;&quot;);
+	boolean isValueExist = response.contains(&quot;id=\&quot;customfield_11103-val\&quot;&quot;);
+	
+	log.info(&quot;isFieldExist - &quot; + isFieldExist.toString() + &quot; isValueExist - &quot; + isValueExist.toString());
+	
+	if (isFieldExist &amp;&amp; isValueExist) {
+		boolean isSubTaskExist = response.contains(&quot;id=\&quot;view-subtasks_heading\&quot;&quot;);
+		log.info(&quot;isSubTaskExist - &quot; + isSubTaskExist.toString());
+		
+		if (isSubTaskExist) {
+			
+			Pattern subTaskPattern = Pattern.compile(&quot;&lt;td class=\&quot;customfield_11106\&quot;&gt;(.*?)\n&lt;/td&gt;&quot;);
+			Matcher subTaskMatcher = subTaskPattern.matcher(response);
+			
+			double sum = 0;
+			int count = 0;
+			while (subTaskMatcher.find()) {
+			    String s = subTaskMatcher.group(1);
+			    sum += Double.parseDouble(s.trim());
+			    count++;
+			}
+			
+			Pattern parrentPattern = Pattern.compile(&quot;&lt;li id=\&quot;rowForcustomfield_11103\&quot; class=\&quot;item\&quot;&gt;([.\\s\\S]*)&lt;span&gt;([.\\d]*?)&lt;/span&gt;([.\\s\\S]*)&lt;/li&gt;([.\\s\\S]*)&lt;li id=\&quot;rowForcustomfield_11104\&quot;&quot;);
+			
+			Matcher parrentMatcher = parrentPattern.matcher(response);
+			
+			double mean = 0;
+			while (parrentMatcher.find()) {
+				mean = Double.parseDouble(parrentMatcher.group(2).trim());
+			}
+			
+			double meanSubTasks = (double) Math.round(((double) sum / count) * 100) / 100;
+			
+			log.info(&quot;Mean of subtasks = &quot; + meanSubTasks);
+			log.info(&quot;Mean field value = &quot; + mean);
+			
+			if (meanSubTasks == mean) {
+				prev.setSuccessful(true);
+			} else {
+				prev.setSuccessful(false);
+			}
+		}
+		
+		prev.setSuccessful(true);
+		
+	} else {
+		prev.setSuccessful(false);
+	}	
+
+}
+
+</stringProp>
+                  <stringProp name="BeanShellAssertion.filename"></stringProp>
+                  <stringProp name="BeanShellAssertion.parameters"></stringProp>
+                  <boolProp name="BeanShellAssertion.resetInterpreter">false</boolProp>
+                </BeanShellAssertion>
+                <hashTree/>
+              </hashTree>
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Check maximum" enabled="true">
+                <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+                  <collectionProp name="Arguments.arguments"/>
+                </elementProp>
+                <stringProp name="HTTPSampler.domain"></stringProp>
+                <stringProp name="HTTPSampler.port"></stringProp>
+                <stringProp name="HTTPSampler.protocol"></stringProp>
+                <stringProp name="HTTPSampler.contentEncoding"></stringProp>
+                <stringProp name="HTTPSampler.path">${application.postfix}/browse/${issue_key}</stringProp>
+                <stringProp name="HTTPSampler.method">GET</stringProp>
+                <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+                <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+                <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+                <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+                <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+                <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+                <stringProp name="HTTPSampler.response_timeout"></stringProp>
+              </HTTPSamplerProxy>
+              <hashTree>
+                <BeanShellAssertion guiclass="BeanShellAssertionGui" testclass="BeanShellAssertion" testname="Check maximum" enabled="true">
+                  <stringProp name="BeanShellAssertion.query">import java.util.regex;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+response = prev.getResponseDataAsString();
+
+boolean isProjectDP = response.contains(&quot;[\&quot;project-id\&quot;]=\&quot;10095\&quot;&quot;);
+boolean isPanelConfigExist = response.contains(&quot;id=\&quot;hcf-configs-panel_heading\&quot;&quot;);
+
+log.info(&quot;isProjectDP - &quot; + isProjectDP.toString());
+log.info(&quot;isPanelConfigExist - &quot; + isPanelConfigExist.toString());
+
+if (isProjectDP &amp;&amp; isPanelConfigExist) {
+	log.info(&quot;Correct project&quot;);
+	boolean isFieldExist = response.contains(&quot;id=\&quot;rowForcustomfield_11104\&quot;&quot;);
+	boolean isValueExist = response.contains(&quot;id=\&quot;customfield_11104-val\&quot;&quot;);
+	
+	log.info(&quot;isFieldExist - &quot; + isFieldExist.toString() + &quot; isValueExist - &quot; + isValueExist.toString());
+	
+	if (isFieldExist &amp;&amp; isValueExist) {
+		boolean isSubTaskExist = response.contains(&quot;id=\&quot;view-subtasks_heading\&quot;&quot;);
+		log.info(&quot;isSubTaskExist - &quot; + isSubTaskExist.toString());
+		
+		if (isSubTaskExist) {
+			Pattern subTaskPattern = Pattern.compile(&quot;&lt;td class=\&quot;customfield_11106\&quot;&gt;(.*?)\n&lt;/td&gt;&quot;);
+			Matcher subTaskMatcher = subTaskPattern.matcher(response);
+			
+			double maxofSubTask = 0;
+			
+			while (subTaskMatcher.find()) {
+			    String s = subTaskMatcher.group(1);
+			    if(maxofSubTask &lt; Double.parseDouble(s.trim())) {
+			    		maxofSubTask = Double.parseDouble(s.trim());
+			    }
+			}
+			
+			Pattern parrentPattern = Pattern.compile(&quot;&lt;li id=\&quot;rowForcustomfield_11104\&quot; class=\&quot;item\&quot;&gt;([.\\s\\S]*)&lt;span&gt;([.\\d]*?)&lt;/span&gt;([.\\s\\S]*)&lt;/li&gt;([.\\s\\S]*)&lt;li id=\&quot;rowForcustomfield_11105\&quot;&quot;);
+			
+			Matcher parrentMatcher = parrentPattern.matcher(response);
+			
+			double maximum = 0;
+			
+			while (parrentMatcher.find()) {
+				maximum = Double.parseDouble(parrentMatcher.group(2).trim());
+			}
+			
+			log.info(&quot;Max of subtasks = &quot; + maxofSubTask);
+			log.info(&quot;Maximum field value = &quot; + maximum);
+			
+			if (maxofSubTask == maximum) {
+				prev.setSuccessful(true);
+			} else {
+				prev.setSuccessful(false);
+			}
+
+			
+		}
+		prev.setSuccessful(true);
+		
+	} else {
+		prev.setSuccessful(false);
+	}	
+
+}
+</stringProp>
+                  <stringProp name="BeanShellAssertion.filename"></stringProp>
+                  <stringProp name="BeanShellAssertion.parameters"></stringProp>
+                  <boolProp name="BeanShellAssertion.resetInterpreter">false</boolProp>
+                </BeanShellAssertion>
+                <hashTree/>
+              </hashTree>
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Check minimum" enabled="true">
+                <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+                  <collectionProp name="Arguments.arguments"/>
+                </elementProp>
+                <stringProp name="HTTPSampler.domain"></stringProp>
+                <stringProp name="HTTPSampler.port"></stringProp>
+                <stringProp name="HTTPSampler.protocol"></stringProp>
+                <stringProp name="HTTPSampler.contentEncoding"></stringProp>
+                <stringProp name="HTTPSampler.path">${application.postfix}/browse/${issue_key}</stringProp>
+                <stringProp name="HTTPSampler.method">GET</stringProp>
+                <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+                <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+                <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+                <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+                <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+                <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+                <stringProp name="HTTPSampler.response_timeout"></stringProp>
+              </HTTPSamplerProxy>
+              <hashTree>
+                <BeanShellAssertion guiclass="BeanShellAssertionGui" testclass="BeanShellAssertion" testname="Check minimum" enabled="true">
+                  <stringProp name="BeanShellAssertion.query">import java.util.regex;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+response = prev.getResponseDataAsString();
+
+boolean isProjectDP = response.contains(&quot;[\&quot;project-id\&quot;]=\&quot;10095\&quot;&quot;);
+boolean isPanelConfigExist = response.contains(&quot;id=\&quot;hcf-configs-panel_heading\&quot;&quot;);
+
+log.info(&quot;isProjectDP - &quot; + isProjectDP.toString());
+log.info(&quot;isPanelConfigExist - &quot; + isPanelConfigExist.toString());
+
+if (isProjectDP &amp;&amp; isPanelConfigExist) {
+	log.info(&quot;Correct project&quot;);
+	boolean isFieldExist = response.contains(&quot;id=\&quot;rowForcustomfield_11105\&quot;&quot;);
+	boolean isValueExist = response.contains(&quot;id=\&quot;customfield_11105-val\&quot;&quot;);
+	
+	log.info(&quot;isFieldExist - &quot; + isFieldExist.toString() + &quot; isValueExist - &quot; + isValueExist.toString());
+	
+	if (isFieldExist &amp;&amp; isValueExist) {
+		boolean isSubTaskExist = response.contains(&quot;id=\&quot;view-subtasks_heading\&quot;&quot;);
+		log.info(&quot;isSubTaskExist - &quot; + isSubTaskExist.toString());
+		
+		if (isSubTaskExist) {
+			Pattern subTaskPattern = Pattern.compile(&quot;&lt;td class=\&quot;customfield_11106\&quot;&gt;(.*?)\n&lt;/td&gt;&quot;);
+			Matcher subTaskMatcher = subTaskPattern.matcher(response);
+			
+			subTaskMatcher.find();
+			double minofSubTask = Double.parseDouble(subTaskMatcher.group(1).trim());
+			
+			while (subTaskMatcher.find()) {
+			    String s = subTaskMatcher.group(1);
+			    if (minofSubTask &gt; Double.parseDouble(s.trim())) {
+			    		minofSubTask = Double.parseDouble(s.trim());
+			    }
+			}
+			
+			Pattern parrentPattern = Pattern.compile(&quot;&lt;li id=\&quot;rowForcustomfield_11105\&quot; class=\&quot;item\&quot;&gt;([.\\s\\S]*)&lt;span&gt;([.\\d]*?)&lt;/span&gt;([.\\s\\S]*)&lt;/li&gt;([.\\s\\S]*)&lt;/ul&gt;&quot;);
+			
+			Matcher parrentMatcher = parrentPattern.matcher(response);
+			
+			double minimum = 0;
+			
+			while (parrentMatcher.find()) {
+				minimum = Double.parseDouble(parrentMatcher.group(2).trim());
+			}
+			
+			log.info(&quot;Min of subtasks = &quot; + minofSubTask);
+			log.info(&quot;Minimum field value = &quot; + minimum);
+			 
+			if (minofSubTask == minimum) {
+				prev.setSuccessful(true);
+			} else {
+				prev.setSuccessful(false);
+			}
+		}
+		prev.setSuccessful(true);
+		
+	} else {
+		prev.setSuccessful(false);
+	}
+}
+
+
+</stringProp>
+                  <stringProp name="BeanShellAssertion.filename"></stringProp>
+                  <stringProp name="BeanShellAssertion.parameters"></stringProp>
+                  <boolProp name="BeanShellAssertion.resetInterpreter">false</boolProp>
+                </BeanShellAssertion>
+                <hashTree/>
+              </hashTree>
             </hashTree>
           </hashTree>
           <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="debug sampler" enabled="false">
